@@ -8,14 +8,17 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
-import multiprocessing as mp
+# import multiprocessing as mp
+from concurrent.futures import ThreadPoolExecutor
 import time
 
-PATH = "C:\Program Files (x86)\chromedriver.exe"
+PATH = "C:\Program Files (x86)\Google\Chrome\Application\chromedriver.exe"
 chrome_options = Options()
 chrome_options.add_argument("--headless")
 chrome_options.add_argument('--ignore-certificate-errors')
 chrome_options.add_argument('--ignore-ssl-errors')
+
+THREADS = 5;
 
 def convert_str_to_number(x):
     total_stars = 0
@@ -27,21 +30,29 @@ def convert_str_to_number(x):
             total_stars = float(x[:-1]) * num_map.get(x[-1].upper(), 1)
     return int(total_stars)
 
-def worker(num, q):
+"""
+scrapes allrecpies for user: (num) likes
+
+Returns:
+    {"user (int): [ Likes ](strings) "}
+"""
+def scrapper(num, file):
+    
     driver = webdriver.Chrome(PATH, options=chrome_options)
     wait = WebDriverWait(driver, 0.1)
+    file.write('[')
     a_list = []
-
-    while num <= (num + 1):
+    userNum = 1040 + num
+    while(1):
         try:
-            driver.get("https://www.allrecipes.com/cook/" + str(num) + "/favorites/")
+            driver.get("https://www.allrecipes.com/cook/" + str(userNum) + "/favorites/")
             try:
                 likes = driver.find_element_by_xpath(
                     '//*[@id="main-content"]/section/div[1]/ul/li[2]/ul[2]/li[2]/span')
             except:
-                continue
+                print('error 1')
             bool = True
-            print('getting profile of user ' + str(num))
+            # print('getting profile of user ' + str(num))
             count = 0
             while bool:
                 try:
@@ -58,73 +69,63 @@ def worker(num, q):
             except:
                 likes = convert_str_to_number(likes)
             if int(likes) < 10:
-                num += 1
-                continue
+                # num += 1
+                userNum += num + THREADS
+                print('error2')
             recipe_str = ""
             i = 0
             added = 0
             while added != int(likes):
                 i += 1
-                print(str(i))
+                # print(str(i))
                 if i > added + 50:
                     break
                 try:
                     recipe = wait.until(EC.presence_of_element_located(
                         (By.XPATH,
-                         '(//*[@id="main-content"])/div[4]/div[1]/div[2]/div/div[1]/section/div/article[' + str(
-                             i) + ']/div/div/div/div[2]/h3/a/span')))
+                            '(//*[@id="main-content"])/div[4]/div[1]/div[2]/div/div[1]/section/div/article[' + str(
+                                i) + ']/div/div/div/div[2]/h3/a/span')))
                 except:
-                    continue
+                    pass
 
-                # recipe = driver.find_element_by_xpath('//*[@id="main-content"]/div[4]/div[1]/div[2]/div/div[1]/section/div/article['+str(i)+']/div/div/div/div[2]/h3/a/span')
-                if i == 1:
-                    recipe_str += recipe.text
-                else:
-                    recipe_str += "," + recipe.text
-                print(recipe_str)
-                added += 1
+                    # recipe = driver.find_element_by_xpath('//*[@id="main-content"]/div[4]/div[1]/div[2]/div/div[1]/section/div/article['+str(i)+']/div/div/div/div[2]/h3/a/span')
+                    if i == 1:
+                        recipe_str += recipe.text
+                    else:
+                        recipe_str += "," + recipe.text
+                    # print(recipe_str)
+                    added += 1
 
-            a_list.append([str(num), recipe_str])
+                a_list.append([str(userNum), recipe_str])
         except:
-            num += 1
+            # num += 1
+            userNum += num + THREADS
+        try:
+            a_list.pop()
+            UserLikes = {userNum: a_list[-1][1]}
+            file.write(f"{str(UserLikes)},")
+            file.flush()
+            # return UserLikes
+        except:
+            # return
             continue
-    q.put(a_list)
-    return a_list
-
-def listener(q):
-    with open('recipes2.csv', 'w', newline='') as csvfile:
-        while 1:
-            m = q.get()
-            if m == 'kill':
-                break
-            writer = csv.writer(csvfile)
-            writer.writerow(m)
-            csvfile.flush()
-
-def start_process():
-    print ('Starting', mp.current_process().name)
+        userNum += num + THREADS
 
 def main():
-    manager = mp.Manager()
-    q = manager.Queue()
-    pool = mp.Pool(mp.cpu_count() + 2, initializer=start_process)
+    workerPool = [] 
+    for i in range(1, THREADS + 1):
+        workerPool.append(i) 
+    workerPool = tuple(workerPool)
+    print(workerPool)
+    with open("worker1.txt", 'w') as worker1, open("worker2.txt", 'w') as worker2,  open("worker3.txt", 'w') as worker3,  open("worker4.txt", 'w') as worker4,  open("worker5.txt", 'w') as worker5:
+        with ThreadPoolExecutor(max_workers=THREADS) as worker:
+            worker.map(scrapper, workerPool, (worker1,worker2,worker3,worker4,worker5))
+            worker.shutdown()
 
-    watcher = pool.apply_async(listener, (q,))
 
-    jobs = []
-    for i in range(14):
-        job = pool.apply_async(worker, (1 * i, q))
-        jobs.append(job)
 
-    for job in jobs:
-        job.get()
-
-    q.put('kill')
-    pool.close()
-    pool.join()
-
-# Press the green button in the gutter to run the script.
+def test(num):
+    a = 1000+num
+    print(a)
 if __name__ == '__main__':
     main()
-
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/

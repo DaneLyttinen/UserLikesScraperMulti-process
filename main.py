@@ -26,14 +26,16 @@ def convert_str_to_number(x):
 def worker(num):
     driver = webdriver.Chrome(PATH, options=chrome_options)
     wait = WebDriverWait(driver, 0.1)
-    a_list = []
+    
     end = num + 10
     header = ['id', 'recipes']
     with open('recipes'+str(num)+'.csv', 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(header)
         while num <= (end):
+            a_list = []
             try:
+                
                 driver.get("https://www.allrecipes.com/cook/" + str(num) + "/favorites/")
                 """
                 If the profile does not exist through the iterative process of simply adding 1

@@ -1,7 +1,3 @@
-# This is a sample Python script.
-
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
 import csv
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
@@ -38,7 +34,9 @@ def worker(num, q):
             try:
                 likes = driver.find_element_by_xpath(
                     '//*[@id="main-content"]/section/div[1]/ul/li[2]/ul[2]/li[2]/span')
-            except:
+            except Exception as e:
+                print(e)
+                num += 1
                 continue
             bool = True
             print('getting profile of user ' + str(num))
@@ -76,7 +74,6 @@ def worker(num, q):
                 except:
                     continue
 
-                # recipe = driver.find_element_by_xpath('//*[@id="main-content"]/div[4]/div[1]/div[2]/div/div[1]/section/div/article['+str(i)+']/div/div/div/div[2]/h3/a/span')
                 if i == 1:
                     recipe_str += recipe.text
                 else:
@@ -85,9 +82,11 @@ def worker(num, q):
                 added += 1
 
             a_list.append([str(num), recipe_str])
+            num += 1
         except:
             num += 1
             continue
+    driver.quit()
     q.put(a_list)
     return a_list
 
@@ -113,7 +112,7 @@ def main():
 
     jobs = []
     for i in range(14):
-        job = pool.apply_async(worker, (1 * i, q))
+        job = pool.apply_async(worker, (i, q))
         jobs.append(job)
 
     for job in jobs:
@@ -123,8 +122,6 @@ def main():
     pool.close()
     pool.join()
 
-# Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     main()
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/

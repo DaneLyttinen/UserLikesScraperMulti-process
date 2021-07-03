@@ -97,11 +97,9 @@ def worker(num):
                     except:
                         continue
 
-                    if i == 1:
-                        recipe_str += recipe.text
-                    else:
-                        recipe_str += "," + recipe.text
-                    print(recipe_str)
+                   
+                    a_list.append(recipe.text)
+                    print(recipe.text)
                     added += 1
                 """
                 Finally write data to a file
